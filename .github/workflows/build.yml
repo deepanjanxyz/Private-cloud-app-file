@@ -5,7 +5,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Build with Buildozer
-        uses: NiklasPlessing/buildozer-action@v1.1
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
-          command: buildozer android debug
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsqlite3-dev lld
+          pip install --upgrade pip
+          pip install buildozer cython==0.29.33 kivy
+
+      - name: Build with Buildozer
+        run: |
+          yes | buildozer android debug
+        continue-on-error: false
+
+      - name: Upload APK
+        uses: actions/artifacts@v3
+        with:
+          name: monster-cloud-apk
+          path: bin/*.apk
