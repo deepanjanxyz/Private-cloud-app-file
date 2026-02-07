@@ -1,5 +1,4 @@
 import os
-import time
 import threading
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
@@ -7,158 +6,86 @@ from kivy.uix.button import Button
 from kivy.uix.label import Label
 from kivy.uix.filechooser import FileChooserIconView
 from kivy.uix.progressbar import ProgressBar
-from kivy.uix.popup import Popup
 from kivy.utils import get_color_from_hex, platform
 from kivy.core.window import Window
 from kivy.clock import Clock, mainthread
 
-# 🎨 কালার প্যালেট (Hacker Theme)
-COLOR_BG = '#050505'       # পিচ কালো
-COLOR_ACCENT = '#00FFCC'   # নিওন সায়ান
-COLOR_TEXT = '#E0E0E0'     # সাদা টেক্সট
-COLOR_BTN = '#00E5FF'      # বাটন কালার
-COLOR_WARN = '#FF3300'     # ওয়ার্নিং রেড
-COLOR_SUCCESS = '#00FF00'  # হ্যাকার গ্রিন
-
-# ক্রাশ আটকাতে সেফ ইম্পোর্ট (Android এর জন্য)
-try:
-    from android.permissions import request_permissions, Permission
-except ImportError:
-    pass
-
 class MonsterCloud(App):
     def build(self):
-        # 🌑 ব্যাকগ্রাউন্ড সেটআপ
-        Window.clearcolor = get_color_from_hex(COLOR_BG)
-        
-        # মেইন লেআউট
+        Window.clearcolor = get_color_from_hex('#050505')
         self.layout = BoxLayout(orientation='vertical', padding=20, spacing=20)
         
-        # 🟢 হ্যাকার স্টাইল হেডার
+        # হেডার
         self.header = Label(
             text="[b]MONSTER CLOUD[/b] [sub]v3.0[/sub]", 
-            markup=True,
-            font_size='28sp', 
-            color=get_color_from_hex(COLOR_ACCENT),
-            size_hint=(1, 0.1)
+            markup=True, font_size='28sp', 
+            color=get_color_from_hex('#00FFCC'), size_hint=(1, 0.1)
         )
         
-        # 📂 স্মার্ট পাথ ডিটেকশন (পিসি ও মোবাইল দুই জায়গাতেই কাজ করবে)
+        # স্মার্ট পাথ
         root_path = '/sdcard' if platform == 'android' else os.path.expanduser("~")
         
-        # ফাইল ম্যানেজার
         self.file_chooser = FileChooserIconView(
-            path=root_path,
-            size_hint=(1, 0.6),
-            color=get_color_from_hex(COLOR_TEXT)
+            path=root_path, size_hint=(1, 0.6),
+            color=get_color_from_hex('#E0E0E0')
         )
         
-        # 📊 প্রগ্রেস বার (নতুন ফিচার)
-        self.progress = ProgressBar(max=100, value=0, size_hint=(1, 0.05))
-        self.progress.opacity = 0 # শুরুতে লুকিয়ে থাকবে
+        self.progress = ProgressBar(max=100, value=0, size_hint=(1, 0.05), opacity=0)
         
-        # 🚀 আপলোড বাটন
         self.btn = Button(
-            text="INITIATE UPLOAD",
-            font_size='20sp',
-            bold=True,
-            size_hint=(1, 0.15),
-            background_normal='',
-            background_color=get_color_from_hex(COLOR_BTN),
-            color=get_color_from_hex('#000000')
+            text="INITIATE UPLOAD", font_size='20sp', bold=True,
+            size_hint=(1, 0.15), background_normal='',
+            background_color=get_color_from_hex('#00E5FF'),
+            color=(0,0,0,1)
         )
-        self.btn.bind(on_press=self.start_upload_thread)
+        self.btn.bind(on_press=self.start_upload)
         
-        # 🖥️ স্ট্যাটাস লগ
-        self.status = Label(
-            text="> SYSTEM READY... WAITING FOR INPUT", 
-            font_name='Roboto',
-            color=get_color_from_hex(COLOR_SUCCESS),
-            size_hint=(1, 0.1)
-        )
+        self.status = Label(text="> SYSTEM READY", color=(0,1,0,1), size_hint=(1, 0.1))
         
-        # উইজেটগুলো অ্যাড করা
         self.layout.add_widget(self.header)
         self.layout.add_widget(self.file_chooser)
-        self.layout.add_widget(self.progress) # প্রগ্রেস বার মাঝখানে দিলাম
+        self.layout.add_widget(self.progress)
         self.layout.add_widget(self.btn)
         self.layout.add_widget(self.status)
         
-        # 🔐 পারমিশন (Android হলে)
         if platform == 'android':
-            self.get_permissions()
+            Clock.schedule_once(self.get_permissions, 1)
             
         return self.layout
 
-    def get_permissions(self):
+    def get_permissions(self, dt):
         try:
-            request_permissions([
-                Permission.READ_EXTERNAL_STORAGE,
-                Permission.WRITE_EXTERNAL_STORAGE
-            ])
-        except Exception:
-            self.status.text = "> DEV MODE: No Permissions Context"
+            from android.permissions import request_permissions, Permission
+            request_permissions([Permission.READ_EXTERNAL_STORAGE, Permission.WRITE_EXTERNAL_STORAGE])
+        except:
+            self.status.text = "> PERMISSION BYPASS (DEV MODE)"
 
-    # 🧵 মাল্টি-থ্রেডিং: যাতে অ্যাপ হ্যাং না করে
-    def start_upload_thread(self, instance):
-        if not self.file_chooser.selection:
-            self.show_popup("Error", "No File Selected!")
-            self.status.text = "> ERROR: TARGET NOT FOUND!"
-            self.status.color = get_color_from_hex(COLOR_WARN)
-            return
+    def start_upload(self, instance):
+        if self.file_chooser.selection:
+            self.btn.disabled = True
+            self.progress.opacity = 1
+            threading.Thread(target=self.fake_upload).start()
+        else:
+            self.status.text = "> ERROR: NO FILE SELECTED"
 
-        # বাটন ডিসেবল করে দেব যাতে বারবার চাপ না দেয়
-        self.btn.disabled = True
-        self.btn.text = "UPLOADING..."
-        self.progress.opacity = 1
-        
-        # ব্যাকগ্রাউন্ডে কাজ শুরু
-        threading.Thread(target=self.simulate_upload_process).start()
-
-    # 🔄 ফেক আপলোড প্রসেস (রিয়েলিস্টিক সিমুলেশন)
-    def simulate_upload_process(self):
-        filename = os.path.basename(self.file_chooser.selection[0])
-        self.update_status(f"> ENCRYPTING & UPLOADING: {filename}", COLOR_ACCENT)
-        
-        for i in range(1, 101):
-            time.sleep(0.05) # নেটওয়ার্ক ডিলে সিমুলেশন
-            self.update_progress(i)
-        
-        self.upload_complete()
-
-    # 🖥️ UI আপডেট ফাংশন (মেইন থ্রেড থেকে কল হবে)
-    @mainthread
-    def update_progress(self, value):
-        self.progress.value = value
+    def fake_upload(self):
+        import time
+        for i in range(101):
+            time.sleep(0.03)
+            self.update_ui(i)
+        self.complete()
 
     @mainthread
-    def update_status(self, text, color_hex):
-        self.status.text = text
-        self.status.color = get_color_from_hex(color_hex)
+    def update_ui(self, val):
+        self.progress.value = val
+        self.status.text = f"> UPLOADING... {val}%"
 
     @mainthread
-    def upload_complete(self):
-        self.status.text = "> UPLOAD SUCCESSFUL! SERVER SYNCED."
-        self.status.color = get_color_from_hex(COLOR_SUCCESS)
+    def complete(self):
+        self.status.text = "> UPLOAD COMPLETE!"
         self.btn.disabled = False
-        self.btn.text = "INITIATE UPLOAD"
-        self.progress.value = 0
         self.progress.opacity = 0
-        self.show_popup("Success", "File uploaded to Monster Cloud!")
-
-    # 🔔 পপআপ মেসেজ দেখানোর জন্য
-    def show_popup(self, title, message):
-        content = BoxLayout(orientation='vertical', padding=10)
-        content.add_widget(Label(text=message))
-        btn = Button(text="OK", size_hint=(1, 0.25))
-        popup = Popup(title=title, content=content, size_hint=(None, None), size=(300, 200))
-        btn.bind(on_press=popup.dismiss)
-        content.add_widget(btn)
-        popup.open()
 
 if __name__ == "__main__":
-    try:
-        MonsterCloud().run()
-    except Exception as e:
-        print(f"Crash Report: {e}")
-                
+    MonsterCloud().run()
+        
