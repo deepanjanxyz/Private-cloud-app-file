@@ -1,0 +1,30 @@
+import asyncio
+from telegram import Bot
+
+# তোর বটের টোকেন এবং চ্যাট আইডি এখানে দিবি
+TOKEN = 'YOUR_BOT_TOKEN'
+CHAT_ID = 'YOUR_CHAT_ID'
+
+# যে মেসেজগুলো পাঠাতে চাস তার লিস্ট
+messages = [
+    "মেসেজ ১", "মেসেজ ২", "মেসেজ ৩", "মেসেজ ৪", "মেসেজ ৫",
+    "মেসেজ ৬", "মেসেজ ৭", "মেসেজ ৮", "মেসেজ ৯", "মেসেজ ১০"
+]
+
+async def send_auto_messages():
+    bot = Bot(token=TOKEN)
+    print("বট চালু হয়েছে...")
+    
+    while True: # বারবার রিপিট হওয়ার জন্য লুপ
+        for msg in messages:
+            try:
+                await bot.send_message(chat_id=CHAT_ID, text=msg)
+                print(f"Sent: {msg}")
+                # ২ সেকেন্ড বিরতি
+                await asyncio.sleep(2) 
+            except Exception as e:
+                print(f"Error: {e}")
+                await asyncio.sleep(5) # এরর খেলে ৫ সেকেন্ড থামবে
+
+if __name__ == "__main__":
+    asyncio.run(send_auto_messages())
