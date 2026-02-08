@@ -1,0 +1,36 @@
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+import time
+
+# ব্রাউজার ড্রাইভার সেটআপ (Chrome উদাহরণ হিসেবে)
+driver = webdriver.Chrome()
+
+def start_bot(url):
+    try:
+        # নির্দিষ্ট ইউআরএল-এ যাওয়া
+        driver.get(url)
+        print(f"Targeting: {url}")
+        
+        # পেজ লোড হওয়ার জন্য সময় দেওয়া
+        time.sleep(3)
+        
+        # ইনপুট ফিল্ড খুঁজে বের করা (উদাহরণস্বরূপ 'q' নামের সার্চ বক্স)
+        search_box = driver.find_element("name", "q")
+        
+        # কমান্ড পাঠানো
+        search_box.send_keys("Automated Action")
+        search_box.send_keys(Keys.RETURN)
+        
+        print("Action performed successfully.")
+        
+    except Exception as e:
+        print(f"Error: {e}")
+    finally:
+        # কাজ শেষে ব্রাউজার বন্ধ করা
+        time.sleep(5)
+        driver.quit()
+
+# বট চালানো
+if __name__ == "__main__":
+    target_url = "https://www.google.com"
+    start_bot(target_url)
